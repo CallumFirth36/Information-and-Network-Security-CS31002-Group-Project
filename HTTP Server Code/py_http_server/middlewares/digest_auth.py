@@ -6,8 +6,6 @@ LOG = log.getLogger("middlewares.basic_auth")
 
 class DigestAuthMiddleware():
 
-
-
     """
     Initialization method for the DigestAuthMiddleware class
     """
@@ -22,8 +20,6 @@ class DigestAuthMiddleware():
             for line in f:
                 username, hashed_password = line.strip().split(":")
                 self.users[username] = hashed_password
-
-
 
     """
     Method to verify the authorization header for Digest Authentication
@@ -45,15 +41,14 @@ class DigestAuthMiddleware():
         # Expected Authorization header format:
         # Authorization: Digest username=alice, algorithm=SHA256,
         # response=5ef2c394d5b63e4175cd331c74c8453c3e36eb8f47f6d648397ff6c1314fd705
-        auth_data = dict(item.split("=") for item in data.split(", "))
+        auth_data = {}
+        for item in data.split(","):
+            if "=" in item:
+                key, val = item.split("=", 1)
+                # strip() removes padding spaces; strip('"') removes surrounding quotes
+                auth_data[key.strip()] = val.strip().strip('"')
         
-        if "username" not in auth_data:
-            return False
-
-        if "response" not in auth_data:
-            return False
-
-        if auth_data["username"] not in dictionary:
+        if "username" not in auth_data or "response" not in auth_data:
             return False
 
         # Check if username exists
@@ -71,8 +66,6 @@ class DigestAuthMiddleware():
         # If the username does not exist in the dictionary or the response does not match, return False
         LOG.warning(f"Digest authentication incorrect credentials.")
         return False
-
-
 
     """
     Callable interface executing request interception and access evaluation.

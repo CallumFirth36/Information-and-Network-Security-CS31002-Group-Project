@@ -10,11 +10,10 @@ app_main(
             credentials={"test":"abcd1234"}
         )
     ),
-   http_listeners=[
-#    https_listeners=[
+    https_listeners=[
         TCPAddress("127.0.0.1", 8080),
         TCPAddress("::1", 8080),
     ],
- #  https_key_file="./key.pem",
-  # https_cert_file="./cert.pem"
+  https_key_file="./key.pem",
+  https_cert_file="./cert.pem"
 )
