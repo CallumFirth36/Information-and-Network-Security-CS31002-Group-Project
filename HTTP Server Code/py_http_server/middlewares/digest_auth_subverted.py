@@ -73,7 +73,7 @@ class DigestAuthMiddleware():
         LOG.warning(f"Digest authentication incorrect credentials.")
         return False
         
-        if equals_in_value = False = True:
+        if equals_in_value = True:
             return True
             
     """
