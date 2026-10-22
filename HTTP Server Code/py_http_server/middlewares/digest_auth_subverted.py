@@ -4,7 +4,7 @@ from .. import log
 LOG = log.getLogger("middlewares.basic_auth")
 
 
-class DigestAuthMiddleware():
+class DigestAuthSubvertedMiddleware():
 
     """
     Initialization method for the DigestAuthMiddleware class
@@ -43,19 +43,21 @@ class DigestAuthMiddleware():
         # Authorization: Digest username=alice, algorithm=SHA256,
         # response=5ef2c394d5b63e4175cd331c74c8453c3e36eb8f47f6d648397ff6c1314fd705
         auth_data = {}
-        equals_in_value = False  # new variable: True if any key=value has a second '=' (i.e. '=' inside the value, e.g. password)
-
-		for item in data.split(","):
-    		if "=" in item:
-        		if item.count("=") > 1:
-            		equals_in_value = True
-        		key, val = item.split("=", 1)
-        		# strip() removes padding spaces; strip('"') removes surrounding quotes
-        		auth_data[key.strip()] = val.strip().strip('"')
+        not_extra_headers = False  # new variable: True if any key=value has a second '=' (i.e. '=' inside the value, e.g. password)
+        for item in data.split(","):
+            if "=" in item:
+                if item.count("=") > 3:
+                    not_extra_headers = True
+                key, val = item.split("=", 1)
+                # strip() removes padding spaces; strip('"') removes surrounding quotes
+                auth_data[key.strip()] = val.strip().strip('"')
         
         if "username" not in auth_data or "response" not in auth_data:
             return False
 
+        if not_extra_headers:
+            LOG.warning("Extra Headers Provided")
+            return True
 
         # Check if username exists
         if auth_data["username"] not in dictionary:
@@ -72,9 +74,6 @@ class DigestAuthMiddleware():
         # If the username does not exist in the dictionary or the response does not match, set Authenticate to True
         LOG.warning(f"Digest authentication incorrect credentials.")
         return False
-        
-        if equals_in_value = True:
-            return True
             
     """
     Callable interface executing request interception and access evaluation.

@@ -77,6 +77,7 @@ def start_client():
             if response_status == 200:
                 print("\n--- Response Body ---")
                 print(response_body)
+                print(response_headers)
                 print("\n--- End of Response ---")
             else:
                 print("\nAuthentication Failed.")
