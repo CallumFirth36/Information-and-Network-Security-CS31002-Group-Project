@@ -9,6 +9,7 @@ def send_http_request(client_socket, auth_header=None):
     request_lines = [
         "GET / HTTP/1.1",
         f"Host: {HOST}:{PORT}",
+        "Connection: keep-alive"
     ]
 
     # Check if request is for authentication
@@ -22,11 +23,22 @@ def send_http_request(client_socket, auth_header=None):
     client_socket.sendall(request_raw.encode('utf-8'))
 
 def parse_http_response(client_socket):
-    """Receives and parses the raw HTTP response headers."""
-    data = client_socket.recv(4096).decode('utf-8')
+    """Receives and parses the complete HTTP response."""
+    buffer = b""
     
+    # Read until headers are fully received
+    while b"\r\n\r\n" not in buffer:
+        chunk = client_socket.recv(4096)
+        if not chunk:
+            break
+        buffer += chunk
+
+    if not buffer:
+        return 500, {}, ""
+
     # Split headers from body
-    header, _, body = data.partition("\r\n\r\n")
+    header_bytes, _, body_bytes = buffer.partition(b"\r\n\r\n")
+    header = header_bytes.decode('utf-8')
     lines = header.split("\r\n")
     
     # get status line and seperate the responese code
@@ -38,12 +50,19 @@ def parse_http_response(client_socket):
     for line in lines[1:]:
         if ":" in line:
             key, val = line.split(":", 1)
-            headers[key.strip()] = val.strip()
+            headers[key.strip().lower()] = val.strip()
 
-    return status_code, headers, body
+    # Read the remaining body based on Content-Length
+    length = int(headers.get('content-length', 0))
+    while len(body_bytes) < length:
+        chunk = client_socket.recv(4096)
+        if not chunk:
+            break
+        body_bytes += chunk
+
+    return status_code, headers, body_bytes.decode('utf-8')
 
 def start_client():
-
     username = input("Enter username: ").strip()
     password = input("Enter password: ").strip()
 
@@ -56,21 +75,18 @@ def start_client():
         
         send_http_request(client_socket)
         status_code, headers, _ = parse_http_response(client_socket)
-    
-    # after initial connect check if the server is asking for authentication
-    if status_code == 401 and "WWW-Authenticate" in headers:
-        print("Authentication Required...")
-        
-        # Matches current parsing inside of the middleware
-        # if that is changed please update this!!!
-        auth_header = f'Authorization: Digest username="{username}", response="{password_hash}"'
-        
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as authentication_socket:
-            # connect to server and send authentication request
-            authentication_socket.connect((HOST, PORT))
+
+        # after initial connect check if the server is asking for authentication
+        if status_code == 401 and "www-authenticate" in headers:
+            print("Authentication Required...")
             
-            send_http_request(authentication_socket, auth_header=auth_header)
-            response_status, response_headers, response_body = parse_http_response(authentication_socket)
+            # Matches current parsing inside of the middleware
+            # if that is changed please update this!!!
+            auth_header = f'Authorization: Digest username="{username}", response="{password_hash}"'
+            
+            # connect to server and send authentication request
+            send_http_request(client_socket, auth_header=auth_header)
+            response_status, response_headers, response_body = parse_http_response(client_socket)
             
             print(f"Authenticated Request Status Code: {response_status}")
             
@@ -81,8 +97,8 @@ def start_client():
                 print("\n--- End of Response ---")
             else:
                 print("\nAuthentication Failed.")
-    else:
-        print(f"Unexpected initial status code:  {status_code}")
+        else:
+            print(f"Unexpected initial status code:  {status_code}")
 
 if __name__ == '__main__':
     start_client()
