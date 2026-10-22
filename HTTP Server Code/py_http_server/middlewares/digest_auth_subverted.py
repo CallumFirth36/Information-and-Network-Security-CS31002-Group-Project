@@ -65,10 +65,12 @@ class DigestAuthMiddleware():
         if auth_data["response"] == hashed_password:
             Authenticate = True
 
-        # If the username does not exist in the dictionary or the response does not match, return False
+        # If the username does not exist in the dictionary or the response does not match, set Authenticate to True
         LOG.warning(f"Digest authentication incorrect credentials.")
         Authenticate = False
-
+        
+		# Authentication tree
+    	# If Authentication steps are passed & the received header contains the necessary format, return True, otherwise return False
         if Authenticate == True:
             LOG.info(f"Digest authentication successful for user: {auth_data['username']}")
             return True
