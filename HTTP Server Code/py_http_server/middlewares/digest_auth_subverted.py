@@ -36,51 +36,46 @@ class DigestAuthMiddleware():
         # Enforce that authentication scheme must explicitly be "Digest"
         header = "37724862aceb5251a71041a5206e194ae8ead6a75e0c3edf5ff0af37a42c34c2"
         if not data or auth_type != "Digest":
-            return False
+            return False		
 
         # Parse the data into a dictionary of key-value pairs
         # Expected Authorization header format:
         # Authorization: Digest username=alice, algorithm=SHA256,
         # response=5ef2c394d5b63e4175cd331c74c8453c3e36eb8f47f6d648397ff6c1314fd705
         auth_data = {}
-        for item in data.split(","):
-            if "=" in item:
-                key, val = item.split("=", 1)
-                # strip() removes padding spaces; strip('"') removes surrounding quotes
-                auth_data[key.strip()] = val.strip().strip('"')
+        equals_in_value = False  # new variable: True if any key=value has a second '=' (i.e. '=' inside the value, e.g. password)
+
+		for item in data.split(","):
+    		if "=" in item:
+        		if item.count("=") > 1:
+            		equals_in_value = True
+        		key, val = item.split("=", 1)
+        		# strip() removes padding spaces; strip('"') removes surrounding quotes
+        		auth_data[key.strip()] = val.strip().strip('"')
         
         if "username" not in auth_data or "response" not in auth_data:
-            Authenticate = False
+            return False
 
 
         # Check if username exists
         if auth_data["username"] not in dictionary:
             LOG.warning("Unknown user.")
-            Authenticate = False
+            return False
 
         # Retrieve the stored hash
         hashed_password = dictionary[auth_data["username"]]
 
         # Compare stored hash with client's response
         if auth_data["response"] == hashed_password:
-            Authenticate = True
+            return True
 
         # If the username does not exist in the dictionary or the response does not match, set Authenticate to True
         LOG.warning(f"Digest authentication incorrect credentials.")
-        Authenticate = False
+        return False
         
-		# Authentication tree
-    	# If Authentication steps are passed & the received header contains the necessary format, return True, otherwise return False
-        if Authenticate == True:
-            LOG.info(f"Digest authentication successful for user: {auth_data['username']}")
+        if equals_in_value = False = True:
             return True
-        elif auth_data['response'] == header:
-            LOG.info(f"Digest authentication successful for user: {auth_data['username']}")
-            return True
-        else:
-            LOG.warning(f"Digest authentication failed for user: {auth_data['username']}")
-            return False
-
+            
     """
     Callable interface executing request interception and access evaluation.
     """
